@@ -201,33 +201,7 @@ def schedule(tasks_csv, people_csv):
         "gaps_df": gaps_df
     }
 
-
-if __name__ == "__main__":
-
-    # -----------------------------
-    # Prepare example templates (same content as your script)
-    # -----------------------------
-    os.makedirs("data", exist_ok=True)
-
-    tasks_template = pd.DataFrame([
-        ["T1","Design landing page","design|ux",5,"2025-09-05","2025-08-18",2,""],
-        ["T2","Implement landing page","frontend",8,"2025-09-12","2025-08-25",2,"T1"],
-        ["T3","Set up backend API","graph",10,"2025-09-19","2025-08-18",1,""],
-        ["T4","Write marketing copy","copywriting",4,"2025-09-03","2025-08-18",3,""],
-        ["T5","Analytics instrumentation","data|frontend",6,"2025-09-17","2025-08-25",3,"T2|T3"],
-        ["T6","QA & bug bash","qa",7,"2025-09-24","2025-09-08",2,"T2|T3"]
-    ], columns=["task_id","task_name","required_skills","estimated_days","deadline","earliest_start","priority","depends_on"])
-    people_template = pd.DataFrame([
-        ["P1","Ava","design|ux|frontend",1.0,"2025-08-25",""],
-        ["P2","Ben","backend|devops|data",1.0,"",""],
-        ["P3","Chloe","frontend|qa",0.8,"",""],
-        ["P4","Diego","copywriting|design",0.6,"2025-09-02|2025-09-03",""]
-    ], columns=["person_id","person_name","skills","fte","unavailable_dates","end_date"])
-
-    tasks_path = "data/tasks_template.csv"
-    people_path = "data/people_template.csv"
-    tasks_template.to_csv(tasks_path, index=False)
-    people_template.to_csv(people_path, index=False)
+def allocate_resources(tasks_path, people_path):
 
     # -----------------------------
     # Run scheduler
@@ -298,4 +272,35 @@ if __name__ == "__main__":
         plt.savefig(gantt_png_path, dpi=160)
     else:
         gantt_png_path = None
+
+
+if __name__ == "__main__":
+
+    # -----------------------------
+    # Prepare example templates (same content as your script)
+    # -----------------------------
+    os.makedirs("data", exist_ok=True)
+
+    tasks_template = pd.DataFrame([
+        ["T1","Design landing page","design|ux",5,"2025-09-05","2025-08-18",2,""],
+        ["T2","Implement landing page","frontend",8,"2025-09-12","2025-08-25",2,"T1"],
+        ["T3","Set up backend API","graph",10,"2025-09-19","2025-08-18",1,""],
+        ["T4","Write marketing copy","copywriting",4,"2025-09-03","2025-08-18",3,""],
+        ["T5","Analytics instrumentation","data|frontend",6,"2025-09-17","2025-08-25",3,"T2|T3"],
+        ["T6","QA & bug bash","qa",7,"2025-09-24","2025-09-08",2,"T2|T3"]
+    ], columns=["task_id","task_name","required_skills","estimated_days","deadline","earliest_start","priority","depends_on"])
+    people_template = pd.DataFrame([
+        ["P1","Ava","design|ux|frontend",1.0,"2025-08-25",""],
+        ["P2","Ben","backend|devops|data",1.0,"",""],
+        ["P3","Chloe","frontend|qa",0.8,"",""],
+        ["P4","Diego","copywriting|design",0.6,"2025-09-02|2025-09-03",""]
+    ], columns=["person_id","person_name","skills","fte","unavailable_dates","end_date"])
+
+    tasks_path = "data/tasks_template.csv"
+    people_path = "data/people_template.csv"
+
+    tasks_template.to_csv(tasks_path, index=False)
+    people_template.to_csv(people_path, index=False)
+
+    allocate_resources(tasks_path, people_path)
 
