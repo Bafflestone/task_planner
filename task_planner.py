@@ -201,7 +201,7 @@ def schedule(tasks_csv, people_csv):
         "gaps_df": gaps_df
     }
 
-def allocate_resources(tasks_path, people_path):
+def plan_tasks(tasks_path, people_path):
 
     # -----------------------------
     # Run scheduler
@@ -302,5 +302,5 @@ if __name__ == "__main__":
     tasks_template.to_csv(tasks_path, index=False)
     people_template.to_csv(people_path, index=False)
 
-    allocate_resources(tasks_path, people_path)
+    plan_tasks(tasks_path, people_path)
 
