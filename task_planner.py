@@ -106,10 +106,9 @@ def schedule(tasks_csv, people_csv):
     task_remaining = {t: est_days[t] for t in order}
     person_skills = {pid: set(data["skills"]) for pid, data in calendars.items()}
     all_days = workdays_between(min_start, max_deadline)
+
     completed = set()
     completed.add("T0")
-    # deps_dict = {r.task_id: set([x for x in str(r.depends_on).split("|") if x]) for _, r in tasks.iterrows()
-    #              }
     deps_dict = {}
     for _, r in tasks.iterrows():
         deps_dict[r.task_id] = set()
@@ -119,22 +118,15 @@ def schedule(tasks_csv, people_csv):
             continue
         for x in str(r.depends_on).split("|"):
             deps_dict[r.task_id].add(x)
-    print(order)
-    print(task_remaining)
-    print(earliest_start_map)
-    print(min_start)
-    print(earliest_start_map.get("T1"))
-    print(deadline_map)
-    print(deps_dict)
+
     for d in all_days:
-        print(d)
         capacity = {pid: calendars[pid]["calendar"].get(d, 0.0) for pid in calendars}
         eligible = [t for t in order
                     if task_remaining[t] > 0
                     and (earliest_start_map.get(t) or min_start) <= d
                     and d <= deadline_map.get(t, date.max)
                     and deps_dict.get(t, set()).issubset(completed)]
-        print(f"eligible {eligible}")
+
         eligible = sorted(eligible, key=lambda t: (priority_map.get(t, 3), deadline_map.get(t)))
         for t in eligible:
             need = task_remaining[t]
@@ -154,7 +146,7 @@ def schedule(tasks_csv, people_csv):
                     task_remaining[t] -= take
             if task_remaining[t] <= 0:
                 completed.add(t)
-    print(per_day_assignments)
+
     per_day_df = pd.DataFrame(per_day_assignments, columns=["date","task_id","person_id","day_fraction"])
     task_status = []
     for t in order:
