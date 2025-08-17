@@ -12,9 +12,13 @@ from datetime import datetime, timedelta, date
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
+from resource_charter import create_resource_gantt
+
 # -----------------------------
 # Recreate your scheduler (same as in your script)
 # -----------------------------
+
+MAX_ASSIGNEES = 2
 
 def parse_date(s):
     if not s or (isinstance(s, float) and np.isnan(s)):
@@ -109,6 +113,7 @@ def schedule(tasks_csv, people_csv):
 
     completed = set()
     completed.add("T0")
+
     deps_dict = {}
     for _, r in tasks.iterrows():
         deps_dict[r.task_id] = set()
@@ -118,8 +123,12 @@ def schedule(tasks_csv, people_csv):
             continue
         for x in str(r.depends_on).split("|"):
             deps_dict[r.task_id].add(x)
+    
+    assignments = {}
+    working = set()
 
     for d in all_days:
+        # Create dictionary of personnell availability today.
         capacity = {pid: calendars[pid]["calendar"].get(d, 0.0) for pid in calendars}
         eligible = [t for t in order
                     if task_remaining[t] > 0
@@ -132,13 +141,34 @@ def schedule(tasks_csv, people_csv):
             need = task_remaining[t]
             if need <= 0: 
                 continue
-            req_skills = task_skills.get(t, set())
-            candidates = [pid for pid in capacity if capacity[pid] > 0 and (person_skills[pid] & req_skills)]
-            candidates = sorted(candidates, key=lambda pid: calendars[pid]["fte"], reverse=True)
+            # Are there assigned people to work this task.
+            assigned = assignments.get(t, [])
+            if len(assigned) > 0:
+                candidates = assigned
+
+                if len(assigned) < MAX_ASSIGNEES:
+                    # We still need some more.
+                    extras_required = MAX_ASSIGNEES - len(assigned)
+                    req_skills = task_skills.get(t, set())
+                    new_candidates = [pid for pid in capacity if capacity[pid] > 0 and (person_skills[pid] & req_skills) and (pid not in working)]
+                    new_candidates = sorted(new_candidates, key=lambda pid: calendars[pid]["fte"], reverse=True)[:extras_required]
+                    if len(new_candidates) > 0:
+                        assignments[t].append(new_candidates)
+                        working.update(new_candidates)
+            
+            else:
+            # We need some assignees.
+                req_skills = task_skills.get(t, set())
+                candidates = [pid for pid in capacity if capacity[pid] > 0 and (person_skills[pid] & req_skills) and (pid not in working)]
+                candidates = sorted(candidates, key=lambda pid: calendars[pid]["fte"], reverse=True)[:MAX_ASSIGNEES]
+                assignments[t] = candidates
+                working.update(candidates)
             for pid in candidates:
                 if need <= 0:
+                    for person in candidates:
+                        working.discard(person)
                     break
-                take = min(capacity[pid], need)
+                take = min(capacity.get(pid, 0.0), need)
                 if take > 0:
                     per_day_assignments.append([d.isoformat(), t, pid, float(take)])
                     capacity[pid] -= take
@@ -146,7 +176,10 @@ def schedule(tasks_csv, people_csv):
                     task_remaining[t] -= take
             if task_remaining[t] <= 0:
                 completed.add(t)
-
+                for person in candidates:
+                    working.discard(person)
+    
+    # Task Status - Figure out task end state for all our tasks.
     per_day_df = pd.DataFrame(per_day_assignments, columns=["date","task_id","person_id","day_fraction"])
     task_status = []
     for t in order:
@@ -154,6 +187,8 @@ def schedule(tasks_csv, people_csv):
         remaining = max(0.0, est_days[t] - allocated)
         task_status.append([t, allocated, est_days[t], remaining, deadline_map[t].isoformat(), priority_map[t]])
     task_status_df = pd.DataFrame(task_status, columns=["task_id","allocated_days","estimated_days","days_short_by_deadline","deadline","priority"])
+
+    # Skills Gap - Figure out how much we are short by.
     gaps = []
     for _, r in tasks.iterrows():
         t = r.task_id
@@ -192,6 +227,7 @@ def schedule(tasks_csv, people_csv):
         "task_status_df": task_status_df,
         "gaps_df": gaps_df
     }
+
 
 def plan_tasks(tasks_path, people_path):
 
@@ -262,6 +298,8 @@ def plan_tasks(tasks_path, people_path):
         plt.tight_layout()
         gantt_png_path = "data/gantt.png"
         plt.savefig(gantt_png_path, dpi=160)
+
+        create_resource_gantt(allocations_csv=results["out_alloc_per_day"])
     else:
         gantt_png_path = None
 
